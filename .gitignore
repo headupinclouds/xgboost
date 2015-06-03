@@ -16,6 +16,7 @@
 *.rds
 *.tar.gz
 *txt*
+!CMakeLists.txt
 *conf
 *buffer
 *model
