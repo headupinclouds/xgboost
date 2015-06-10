@@ -16,7 +16,7 @@
 #include <cstdarg>
 #endif
 
-#if !defined(__GNUC__)
+#if !defined(__GNUC__) || defined(__ANDROID__) || defined(ANDROID)
 #define fopen64 std::fopen
 #endif
 #ifdef _MSC_VER

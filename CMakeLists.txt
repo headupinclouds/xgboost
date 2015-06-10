@@ -8,7 +8,10 @@ HunterGate(
     SHA1 "7103f0ab481523ca93a06c1c55abcd56741d3a97"
 )
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-narrowing -Wno-c++11-narrowing")
+# Disable Clang specific error
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-narrowing -Wno-c++11-narrowing")
+endif()
 
 ### Import sugar for source collection ###
 hunter_add_package(Sugar)
