@@ -9,7 +9,7 @@ HunterGate(
 )
 
 # Disable Clang specific error
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-narrowing -Wno-c++11-narrowing")
 endif()
 
