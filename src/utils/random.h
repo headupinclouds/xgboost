@@ -12,6 +12,7 @@
 #include <vector>
 #include <algorithm>
 #include "./utils.h"
+#include <stdlib.h> // android ndk
 
 /*! namespace of PRNG */
 namespace xgboost {
@@ -91,7 +92,7 @@ struct Random{
 	// use rand instead of rand_r in windows, for MSVC it is fine since rand is threadsafe
 	// For cygwin and mingw, this can slows down parallelism, but rand_r is only used in objective-inl.hpp, won't affect speed in general
 	// todo, replace with another PRNG
-#if defined(_MSC_VER)||defined(_WIN32)||defined(XGBOOST_STRICT_CXX98_)
+#if defined(_MSC_VER)||defined(_WIN32)||defined(XGBOOST_STRICT_CXX98_)||defined(ANDROID)||defined(__ANDROID__)
     return Uniform();
 #else
     return static_cast<double>(rand_r(&rseed)) / (static_cast<double>(RAND_MAX) + 1.0);
