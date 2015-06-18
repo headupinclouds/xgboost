@@ -19,12 +19,14 @@ if(LIB_M_REQUIRED)
   target_link_libraries(xgboost PRIVATE m)
 endif()
 
+message("=========SKIP_INSTALL========: ${SKIP_INSTALL}")
+if(SKIP_INSTALL)
+  return()
+endif()
+
 # install
 set(generated_dir "${CMAKE_CURRENT_BINARY_DIR}/generated")
-
 set(config_install_dir "lib/cmake/${PROJECT_NAME}")
-set(include_install_dir "include")
-
 set(version_config "${generated_dir}/${PROJECT_NAME}ConfigVersion.cmake")
 set(project_config "${generated_dir}/${PROJECT_NAME}Config.cmake")
 set(targets_export_name "${PROJECT_NAME}Targets")

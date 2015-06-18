@@ -31,4 +31,6 @@ endif()
 
 sugar_include(.)
 
+option(SKIP_INSTALL "Skip the package install" OFF)
+
 add_subdirectory(src)
