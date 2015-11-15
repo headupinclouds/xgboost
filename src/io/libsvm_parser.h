@@ -121,7 +121,7 @@ class LibSVMPageFactory  {
       char *head = p;
       while (isdigit(*p) && p != end) ++p;
       if (*p == ':') {
-        out->data.push_back(SparseBatch::Entry(atol(head),
+        out->data.push_back(SparseBatch::Entry(bst_uint(atol(head)),
                                                static_cast<bst_float>(atof(p + 1))));
       } else {
         if (out->label.size() != 0) {

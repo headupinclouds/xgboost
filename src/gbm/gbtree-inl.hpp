@@ -469,7 +469,7 @@ class GBTree : public IGradBooster {
     inline void SetParam(const char *name, const char *val) {
       using namespace std;
       if (!strcmp("num_pbuffer", name)) num_pbuffer = atol(val);
-      if (!strcmp("num_output_group", name)) num_output_group = atol(val);
+      if (!strcmp("num_output_group", name)) num_output_group = atoi(val);
       if (!strcmp("bst:num_roots", name)) num_roots = atoi(val);
       if (!strcmp("bst:num_feature", name)) num_feature = atoi(val);
       if (!strcmp("bst:size_leaf_vector", name)) size_leaf_vector = atoi(val);
