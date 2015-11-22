@@ -1,10 +1,16 @@
-#ifndef XGBOOST_IO_PAGE_FMATRIX_INL_HPP_
-#define XGBOOST_IO_PAGE_FMATRIX_INL_HPP_
 /*!
+ * Copyright (c) 2014 by Contributors
  * \file page_fmatrix-inl.hpp
  *   col iterator based on sparse page
  * \author Tianqi Chen
  */
+#ifndef XGBOOST_IO_PAGE_FMATRIX_INL_HPP_
+#define XGBOOST_IO_PAGE_FMATRIX_INL_HPP_
+
+#include <vector>
+#include <string>
+#include <algorithm>
+
 namespace xgboost {
 namespace io {
 /*! \brief thread buffer iterator */
@@ -42,9 +48,9 @@ class ThreadColPageIterator: public utils::IIterator<ColBatch> {
   }
   // set index set
   inline void SetIndexSet(const std::vector<bst_uint> &fset, bool load_all) {
-    itr.get_factory().SetIndexSet(fset, load_all);    
+    itr.get_factory().SetIndexSet(fset, load_all);
   }
-  
+
  private:
   // output data
   ColBatch out_;
@@ -58,11 +64,13 @@ struct ColConvertFactory {
     return true;
   }
   inline void Setup(float pkeep,
+                    size_t max_row_perbatch,
                     size_t num_col,
                     utils::IIterator<RowBatch> *iter,
                     std::vector<bst_uint> *buffered_rowset,
                     const std::vector<bool> *enabled) {
     pkeep_ = pkeep;
+    max_row_perbatch_ = max_row_perbatch;
     num_col_ = num_col;
     iter_ = iter;
     buffered_rowset_ = buffered_rowset;
@@ -87,13 +95,14 @@ struct ColConvertFactory {
           tmp_.Push(batch[i]);
         }
       }
-      if (tmp_.MemCostBytes() >= kPageSize) {
+      if (tmp_.MemCostBytes() >= kPageSize ||
+          tmp_.Size() >= max_row_perbatch_) {
         this->MakeColPage(tmp_, BeginPtr(*buffered_rowset_) + btop,
                           *enabled_, val);
         return true;
       }
     }
-    if (tmp_.Size() != 0){
+    if (tmp_.Size() != 0) {
         this->MakeColPage(tmp_, BeginPtr(*buffered_rowset_) + btop,
                           *enabled_, val);
         return true;
@@ -101,7 +110,7 @@ struct ColConvertFactory {
       return false;
     }
   }
-  inline void Destroy(void) {}  
+  inline void Destroy(void) {}
   inline void BeforeFirst(void) {}
   inline void MakeColPage(const SparsePage &prow,
                           const bst_uint *ridx,
@@ -112,7 +121,7 @@ struct ColConvertFactory {
     #pragma omp parallel
     {
       nthread = omp_get_num_threads();
-      int max_nthread = std::max(omp_get_num_procs() / 2 - 4, 1); 
+      int max_nthread = std::max(omp_get_num_procs() / 2 - 4, 1);
       if (nthread > max_nthread) {
         nthread = max_nthread;
       }
@@ -127,10 +136,10 @@ struct ColConvertFactory {
       int tid = omp_get_thread_num();
       for (size_t j = prow.offset[i]; j < prow.offset[i+1]; ++j) {
         const SparseBatch::Entry &e = prow.data[j];
-        if (enabled[e.index]) { 
+        if (enabled[e.index]) {
           builder.AddBudget(e.index, tid);
         }
-      }    
+      }
     }
     builder.InitStorage();
     #pragma omp parallel for schedule(static) num_threads(nthread)
@@ -157,6 +166,8 @@ struct ColConvertFactory {
   }
   // probability of keep
   float pkeep_;
+  // maximum number of rows per batch
+  size_t max_row_perbatch_;
   // number of columns
   size_t num_col_;
   // row batch iterator
@@ -164,7 +175,7 @@ struct ColConvertFactory {
   // buffered rowset
   std::vector<bst_uint> *buffered_rowset_;
   // enabled marks
-  const std::vector<bool> *enabled_;  
+  const std::vector<bool> *enabled_;
   // internal temp cache
   SparsePage tmp_;
   /*! \brief page size 256 M */
@@ -186,7 +197,7 @@ class FMatrixPage : public IFMatrix {
     if (iter_ != NULL) delete iter_;
   }
   /*! \return whether column access is enabled */
-  virtual bool HaveColAccess(void) const {   
+  virtual bool HaveColAccess(void) const {
     return col_size_.size() != 0;
   }
   /*! \brief get number of colmuns */
@@ -207,11 +218,11 @@ class FMatrixPage : public IFMatrix {
     size_t nmiss = num_buffered_row_ - (col_size_[cidx]);
     return 1.0f - (static_cast<float>(nmiss)) / num_buffered_row_;
   }
-  virtual void InitColAccess(const std::vector<bool> &enabled, 
-                             float pkeep = 1.0f) {
+  virtual void InitColAccess(const std::vector<bool> &enabled,
+                             float pkeep, size_t max_row_perbatch) {
     if (this->HaveColAccess()) return;
     if (TryLoadColData()) return;
-    this->InitColData(enabled, pkeep);
+    this->InitColData(enabled, pkeep, max_row_perbatch);
     utils::Check(TryLoadColData(), "failed on creating col.blob");
   }
   /*!
@@ -237,11 +248,11 @@ class FMatrixPage : public IFMatrix {
   /*!
    * \brief colmun based iterator
    */
-  virtual utils::IIterator<ColBatch> *ColIterator(const std::vector<bst_uint> &fset) {    
+  virtual utils::IIterator<ColBatch> *ColIterator(const std::vector<bst_uint> &fset) {
     size_t ncol = this->NumCol();
     col_index_.resize(0);
     for (size_t i = 0; i < fset.size(); ++i) {
-      if (fset[i] < ncol) col_index_.push_back(fset[i]); 
+      if (fset[i] < ncol) col_index_.push_back(fset[i]);
     }
     col_iter_.SetIndexSet(col_index_, false);
     col_iter_.BeforeFirst();
@@ -250,13 +261,13 @@ class FMatrixPage : public IFMatrix {
   // set the cache file name
   inline void set_cache_file(const std::string &cache_file) {
     col_data_name_ = std::string(cache_file) + ".col.blob";
-    col_meta_name_ = std::string(cache_file) + ".col.meta";    
+    col_meta_name_ = std::string(cache_file) + ".col.meta";
   }
 
  protected:
   inline bool TryLoadColData(void) {
     std::FILE *fi = fopen64(col_meta_name_.c_str(), "rb");
-    if (fi == NULL) return false;    
+    if (fi == NULL) return false;
     utils::FileStream fs(fi);
     LoadMeta(&fs);
     fs.Close();
@@ -282,7 +293,8 @@ class FMatrixPage : public IFMatrix {
    * \brief intialize column data
    * \param pkeep probability to keep a row
    */
-  inline void InitColData(const std::vector<bool> &enabled, float pkeep) {
+  inline void InitColData(const std::vector<bool> &enabled,
+                          float pkeep, size_t max_row_perbatch) {
     // clear rowset
     buffered_rowset_.clear();
     col_size_.resize(info.num_col());
@@ -294,20 +306,20 @@ class FMatrixPage : public IFMatrix {
     size_t bytes_write = 0;
     utils::ThreadBuffer<SparsePage*, ColConvertFactory> citer;
     citer.SetParam("buffer_size", "2");
-    citer.get_factory().Setup(pkeep, info.num_col(),
+    citer.get_factory().Setup(pkeep, max_row_perbatch, info.num_col(),
                               iter_, &buffered_rowset_, &enabled);
     citer.Init();
     SparsePage *pcol;
     while (citer.Next(pcol)) {
       for (size_t i = 0; i < pcol->Size(); ++i) {
-        col_size_[i] += pcol->offset[i + 1] - pcol->offset[i];        
+        col_size_[i] += pcol->offset[i + 1] - pcol->offset[i];
       }
       pcol->Save(&fo);
       size_t spage = pcol->MemCostBytes();
       bytes_write += spage;
-      double tnow = rabit::utils::GetTime();      
+      double tnow = rabit::utils::GetTime();
       double tdiff = tnow - tstart;
-      utils::Printf("Writting to %s in %g MB/s, %lu MB written current speed:%g MB/s\n",
+      utils::Printf("Writting to %s in %g MB/s, %lu MB written\n",
                     col_data_name_.c_str(),
                     (bytes_write >> 20UL) / tdiff,
                     (bytes_write >> 20UL));

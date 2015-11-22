@@ -103,16 +103,20 @@ xgb.Booster.check <- function(bst, saveraw = TRUE)
 ## ----the following are low level iteratively function, not needed if
 ## you do not want to use them ---------------------------------------
 # get dmatrix from data, label
-xgb.get.DMatrix <- function(data, label = NULL, missing = NULL) {
+xgb.get.DMatrix <- function(data, label = NULL, missing = NULL, weight = NULL) {
   inClass <- class(data)
   if (inClass == "dgCMatrix" || inClass == "matrix") {
     if (is.null(label)) {
       stop("xgboost: need label when data is a matrix")
     }
+    dtrain <- xgb.DMatrix(data, label = label)
     if (is.null(missing)){
       dtrain <- xgb.DMatrix(data, label = label)
     } else {
       dtrain <- xgb.DMatrix(data, label = label, missing = missing)
+    }
+    if (!is.null(weight)){
+      xgb.setinfo(dtrain, "weight", weight)
     }
   } else {
     if (!is.null(label)) {
@@ -122,6 +126,9 @@ xgb.get.DMatrix <- function(data, label = NULL, missing = NULL) {
       dtrain <- xgb.DMatrix(data)
     } else if (inClass == "xgb.DMatrix") {
       dtrain <- data
+    } else if (inClass == "data.frame") {
+      stop("xgboost only support numerical matrix input, 
+           use 'data.frame' to transform the data.")
     } else {
       stop("xgboost: Invalid input of data")
     }
@@ -220,7 +227,8 @@ xgb.cv.mknfold <- function(dall, nfold, param, stratified, folds) {
     stop("nfold must be bigger than 1")
   }
   if(is.null(folds)) {
-    if (exists('objective', where=param) && strtrim(param[['objective']], 5) == 'rank:') {
+    if (exists('objective', where=param) && is.character(param$objective) &&
+        strtrim(param[['objective']], 5) == 'rank:') {
       stop("\tAutomatic creation of CV-folds is not implemented for ranking!\n",
            "\tConsider providing pre-computed CV-folds through the folds parameter.")
     }
@@ -234,7 +242,7 @@ xgb.cv.mknfold <- function(dall, nfold, param, stratified, folds) {
       # For classification, need to convert y labels to factor before making the folds,
       # and then do stratification by factor levels.
       # For regression, leave y numeric and do stratification by quantiles.
-      if (exists('objective', where=param)) {
+      if (exists('objective', where=param) && is.character(param$objective)) {
         # If 'objective' provided in params, assume that y is a classification label
         # unless objective is reg:linear
         if (param[['objective']] != 'reg:linear') y <- factor(y)
@@ -287,7 +295,7 @@ xgb.cv.aggcv <- function(res, showsd = TRUE) {
     }
     ret <- paste(ret, sprintf("%f", mean(stats)), sep="")
     if (showsd) {
-      ret <- paste(ret, sprintf("+%f", sd(stats)), sep="")
+      ret <- paste(ret, sprintf("+%f", stats::sd(stats)), sep="")
     }
   }
   return (ret)
@@ -312,7 +320,7 @@ xgb.createFolds <- function(y, k = 10)
     if(cuts < 2) cuts <- 2
     if(cuts > 5) cuts <- 5
     y <- cut(y,
-             unique(quantile(y, probs = seq(0, 1, length = cuts))),
+             unique(stats::quantile(y, probs = seq(0, 1, length = cuts))),
              include.lowest = TRUE)
   }
 

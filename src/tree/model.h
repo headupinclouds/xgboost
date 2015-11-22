@@ -1,10 +1,12 @@
-#ifndef XGBOOST_TREE_MODEL_H_
-#define XGBOOST_TREE_MODEL_H_
 /*!
+ * Copyright 2014 by Contributors
  * \file model.h
  * \brief model structure for tree
  * \author Tianqi Chen
  */
+#ifndef XGBOOST_TREE_MODEL_H_
+#define XGBOOST_TREE_MODEL_H_
+
 #include <string>
 #include <cstring>
 #include <sstream>
@@ -61,7 +63,7 @@ class TreeModel {
      */
     int size_leaf_vector;
     /*! \brief reserved part */
-    int reserved[31];
+    int reserved[32];
     /*! \brief constructor */
     Param(void) {
       max_depth = 0;
@@ -186,6 +188,8 @@ class TreeModel {
     xgboost_uint_t sindex_;
     // extra info
     Info info_;
+    // reserved field
+    int reserved;
     // set parent
     inline void set_parent(int pidx, bool is_left_child = true) {
       if (is_left_child) pidx |= (1U << XGBOOST_HIGH_BIT);
@@ -286,7 +290,7 @@ class TreeModel {
     return &leaf_vector[nid * param.size_leaf_vector];
   }
   /*! \brief get leaf vector given nid */
-  inline const bst_float* leafvec(int nid) const{
+  inline const bst_float* leafvec(int nid) const {
     if (leaf_vector.size() == 0) return NULL;
     return &leaf_vector[nid * param.size_leaf_vector];
   }
@@ -305,13 +309,16 @@ class TreeModel {
    * \brief load model from stream
    * \param fi input stream
    */
-  inline void LoadModel(utils::IStream &fi) {
+  inline void LoadModel(utils::IStream &fi) { // NOLINT(*)
+    XGBOOST_STATIC_ASSERT(sizeof(Param) % sizeof(uint64_t) == 0)
     utils::Check(fi.Read(&param, sizeof(Param)) > 0,
                  "TreeModel: wrong format");
     nodes.resize(param.num_nodes); stats.resize(param.num_nodes);
     utils::Assert(param.num_nodes != 0, "invalid model"); 
+    XGBOOST_STATIC_ASSERT(sizeof(Node) % sizeof(uint64_t) == 0)
     utils::Check(fi.Read(BeginPtr(nodes), sizeof(Node) * nodes.size()) > 0,
                  "TreeModel: wrong format");
+    XGBOOST_STATIC_ASSERT(sizeof(NodeStat) % sizeof(uint64_t) == 0)
     utils::Check(fi.Read(BeginPtr(stats), sizeof(NodeStat) * stats.size()) > 0,
                  "TreeModel: wrong format");
     if (param.size_leaf_vector != 0) {
@@ -330,7 +337,7 @@ class TreeModel {
    * \brief save model to stream
    * \param fo output stream
    */
-  inline void SaveModel(utils::IStream &fo) const {
+  inline void SaveModel(utils::IStream &fo) const { // NOLINT(*)
     utils::Assert(param.num_nodes == static_cast<int>(nodes.size()),
                   "Tree::SaveModel");
     utils::Assert(param.num_nodes == static_cast<int>(stats.size()),
@@ -413,7 +420,7 @@ class TreeModel {
   }
 
  private:
-  void Dump(int nid, std::stringstream &fo,
+  void Dump(int nid, std::stringstream &fo, // NOLINT(*)
             const utils::FeatMap& fmap, int depth, bool with_stats) {
     for (int i = 0;  i < depth; ++i) {
       fo << '\t';
@@ -482,7 +489,7 @@ struct RTreeNodeStat {
   /*! \brief number of child that is leaf node known up to now */
   int   leaf_child_cnt;
   /*! \brief print information of current stats to fo */
-  inline void Print(std::stringstream &fo, bool is_leaf) const {
+  inline void Print(std::stringstream &fo, bool is_leaf) const { // NOLINT(*)
     if (!is_leaf) {
       fo << ",gain=" << loss_chg << ",cover=" << sum_hess;
     } else {

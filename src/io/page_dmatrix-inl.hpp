@@ -1,11 +1,15 @@
-#ifndef XGBOOST_IO_PAGE_DMATRIX_INL_HPP_
-#define XGBOOST_IO_PAGE_DMATRIX_INL_HPP_
 /*!
+ *  Copyright (c) 2014 by Contributors
  * \file page_dmatrix-inl.hpp
  *   row iterator based on sparse page
  * \author Tianqi Chen
  */
+#ifndef XGBOOST_IO_PAGE_DMATRIX_INL_HPP_
+#define XGBOOST_IO_PAGE_DMATRIX_INL_HPP_
+
 #include <vector>
+#include <string>
+#include <algorithm>
 #include "../data.h"
 #include "../utils/iterator.h"
 #include "../utils/thread_buffer.h"
@@ -33,10 +37,7 @@ class ThreadRowPageIterator: public utils::IIterator<RowBatch> {
   }
   virtual bool Next(void) {
     if (!itr.Next(page_)) return false;
-    out_.base_rowid  = base_rowid_;
-    out_.ind_ptr = BeginPtr(page_->offset);
-    out_.data_ptr = BeginPtr(page_->data);
-    out_.size = page_->offset.size() - 1;
+    out_ = page_->GetRowBatch(base_rowid_);
     base_rowid_ += out_.size;
     return true;
   }
@@ -97,12 +98,12 @@ class DMatrixPageBase : public DataMatrix {
     fbin.Close();
     if (!silent) {
       utils::Printf("DMatrixPage: %lux%lu is saved to %s\n",
-                    static_cast<unsigned long>(mat.info.num_row()),
-                    static_cast<unsigned long>(mat.info.num_col()), fname_);
+                    static_cast<unsigned long>(mat.info.num_row()), // NOLINT(*)
+                    static_cast<unsigned long>(mat.info.num_col()), fname_); // NOLINT(*)
     }
   }
   /*! \brief load and initialize the iterator with fi */
-  inline void LoadBinary(utils::FileStream &fi,
+  inline void LoadBinary(utils::FileStream &fi,  // NOLINT(*)
                          bool silent,
                          const char *fname_) {
     this->set_cache_file(fname_);
@@ -117,8 +118,8 @@ class DMatrixPageBase : public DataMatrix {
     iter_->Load(fs);
     if (!silent) {
       utils::Printf("DMatrixPage: %lux%lu matrix is loaded",
-                    static_cast<unsigned long>(info.num_row()),
-                    static_cast<unsigned long>(info.num_col()));
+                    static_cast<unsigned long>(info.num_row()),  // NOLINT(*)
+                    static_cast<unsigned long>(info.num_col()));  // NOLINT(*)
       if (fname_ != NULL) {
         utils::Printf(" from %s\n", fname_);
       } else {
@@ -144,7 +145,7 @@ class DMatrixPageBase : public DataMatrix {
     }
     this->set_cache_file(cache_file);
     std::string fname_row = std::string(cache_file) + ".row.blob";
-    utils::FileStream fo(utils::FopenCheck(fname_row.c_str(), "wb"));    
+    utils::FileStream fo(utils::FopenCheck(fname_row.c_str(), "wb"));
     SparsePage page;
     size_t bytes_write = 0;
     double tstart = rabit::utils::GetTime();
@@ -181,8 +182,8 @@ class DMatrixPageBase : public DataMatrix {
     if (page.data.size() != 0) {
       page.Save(&fo);
     }
-    fo.Close();    
-    iter_->Load(utils::FileStream(utils::FopenCheck(fname_row.c_str(), "rb")));    
+    fo.Close();
+    iter_->Load(utils::FileStream(utils::FopenCheck(fname_row.c_str(), "rb")));
     // save data matrix
     utils::FileStream fs(utils::FopenCheck(cache_file, "wb"));
     int tmagic = kMagic;
@@ -191,15 +192,15 @@ class DMatrixPageBase : public DataMatrix {
     fs.Close();
     if (!silent) {
       utils::Printf("DMatrixPage: %lux%lu is parsed from %s\n",
-                    static_cast<unsigned long>(info.num_row()),
-                    static_cast<unsigned long>(info.num_col()),
+                    static_cast<unsigned long>(info.num_row()),  // NOLINT(*)
+                    static_cast<unsigned long>(info.num_col()),  // NOLINT(*)
                     uri);
     }
   }
   /*! \brief magic number used to identify DMatrix */
   static const int kMagic = TKMagic;
-  /*! \brief page size 64 MB */
-  static const size_t kPageSize = 64UL << 20UL;
+  /*! \brief page size 32 MB */
+  static const size_t kPageSize = 32UL << 20UL;
 
  protected:
   virtual void set_cache_file(const std::string &cache_file)  = 0;
@@ -236,7 +237,7 @@ class DMatrixPage : public DMatrixPageBase<0xffffab02> {
 class DMatrixHalfRAM : public DMatrixPageBase<0xffffab03> {
  public:
   DMatrixHalfRAM(void) {
-    fmat_ = new FMatrixS(iter_);
+    fmat_ = new FMatrixS(iter_, this->info);
   }
   virtual ~DMatrixHalfRAM(void) {
     delete fmat_;
@@ -244,12 +245,12 @@ class DMatrixHalfRAM : public DMatrixPageBase<0xffffab03> {
   virtual IFMatrix *fmat(void) const {
     return fmat_;
   }
-  virtual void set_cache_file(const std::string &cache_file) {    
+  virtual void set_cache_file(const std::string &cache_file) {
   }
   virtual void CheckMagic(int tmagic) {
     utils::Check(tmagic == DMatrixPageBase<0xffffab02>::kMagic ||
                  tmagic == DMatrixPageBase<0xffffab03>::kMagic,
-                 "invalid format,magic number mismatch");   
+                 "invalid format,magic number mismatch");
   }
   /*! \brief the real fmatrix */
   IFMatrix *fmat_;
