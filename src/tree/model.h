@@ -16,6 +16,19 @@
 #include "../utils/fmap.h"
 #include "../utils/utils.h"
 
+#define XGBOOST_SQUEEZE 1
+
+// TODO: fp16 for small additional gain?
+#if XGBOOST_SQUEEZE
+typedef int16_t xgboost_int_t;
+typedef uint16_t xgboost_uint_t;
+#define XGBOOST_HIGH_BIT 15
+#else
+typedef int32_t xgboost_int_t;
+typedef uint32_t xgboost_uint_t;
+#define XGBOOST_HIGH_BIT 31
+#endif
+
 namespace xgboost {
 namespace tree {
 /*!
@@ -85,11 +98,11 @@ class TreeModel {
     }
     /*! \brief feature index of split condition */
     inline unsigned split_index(void) const {
-      return sindex_ & ((1U << 31) - 1U);
+      return sindex_ & ((1U << XGBOOST_HIGH_BIT) - 1U);
     }
     /*! \brief when feature is unknown, whether goes to left child */
     inline bool default_left(void) const {
-      return (sindex_ >> 31) != 0;
+      return (sindex_ >> XGBOOST_HIGH_BIT) != 0;
     }
     /*! \brief whether current node is leaf node */
     inline bool is_leaf(void) const {
@@ -105,15 +118,15 @@ class TreeModel {
     }
     /*! \brief get parent of the node */
     inline int parent(void) const {
-      return parent_ & ((1U << 31) - 1);
+      return parent_ & ((1U << XGBOOST_HIGH_BIT) - 1);
     }
     /*! \brief whether current node is left child */
     inline bool is_left_child(void) const {
-      return (parent_ & (1U << 31)) != 0;
+      return (parent_ & (1U << XGBOOST_HIGH_BIT)) != 0;
     }
     /*! \brief whether this node is deleted */
     inline bool is_deleted(void) const {
-      return sindex_ == std::numeric_limits<unsigned>::max();
+      return sindex_ == std::numeric_limits<xgboost_uint_t>::max();
     }
     /*! \brief whether current node is root */
     inline bool is_root(void) const {
@@ -134,7 +147,7 @@ class TreeModel {
      */
     inline void set_split(unsigned split_index, TSplitCond split_cond,
                           bool default_left = false) {
-      if (default_left) split_index |= (1U << 31);
+      if (default_left) split_index |= (1U << XGBOOST_HIGH_BIT);
       this->sindex_ = split_index;
       (this->info_).split_cond = split_cond;
     }
@@ -151,9 +164,9 @@ class TreeModel {
     }
     /*! \brief mark that this node is deleted */
     inline void mark_delete(void) {
-      this->sindex_ = std::numeric_limits<unsigned>::max();
+      this->sindex_ = std::numeric_limits<xgboost_uint_t>::max();
     }
-    
+      
    private:
     friend class TreeModel<TSplitCond, TNodeStat>;
     /*! 
@@ -166,16 +179,16 @@ class TreeModel {
     };
     // pointer to parent, highest bit is used to
     // indicate whether it's a left child or not
-    int parent_;
+    xgboost_int_t parent_;
     // pointer to left, right
-    int cleft_, cright_;
+    xgboost_int_t cleft_, cright_;
     // split feature index, left split or right split depends on the highest bit
-    unsigned sindex_;
+    xgboost_uint_t sindex_;
     // extra info
     Info info_;
     // set parent
     inline void set_parent(int pidx, bool is_left_child = true) {
-      if (is_left_child) pidx |= (1U << 31);
+      if (is_left_child) pidx |= (1U << XGBOOST_HIGH_BIT);
       this->parent_ = pidx;
     }
   };
@@ -199,8 +212,8 @@ class TreeModel {
       return nd;
     }
     int nd = param.num_nodes++;
-    utils::Check(param.num_nodes < std::numeric_limits<int>::max(),
-                 "number of nodes in the tree exceed 2^31");
+    utils::Check(param.num_nodes < std::numeric_limits<xgboost_int_t>::max(),
+                 "number of nodes in the tree exceed 2^n");
     nodes.resize(param.num_nodes);
     stats.resize(param.num_nodes);
     leaf_vector.resize(param.num_nodes * param.size_leaf_vector); 
