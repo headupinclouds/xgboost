@@ -239,6 +239,26 @@ class BoostLearner : public rabit::Serializable {
     fo.Write(name_gbm_);
     gbm_->SaveModel(fo, with_pbuffer);
   }
+    
+#if XGBOOST_USE_BOOST
+    friend class boost::serialization::access;
+    template<class Archive> void serialize(Archive & ar, const unsigned int version)
+    {
+        ar & mparam;
+        ar & name_obj_;
+        ar & name_gbm_;
+        ar & gbm_;
+    
+        ar & obj_;
+
+//        if(Archive::is_loading::value)
+//        {
+//            obj_ = CreateObjFunction(name_obj_.c_str());
+//        }
+
+    }
+#endif
+    
   /*!
    * \brief save model into file
    * \param fname file name
@@ -478,6 +498,18 @@ class BoostLearner : public rabit::Serializable {
       if (!strcmp("num_class", name)) num_class = atoi(val);
       if (!strcmp("bst:num_feature", name)) num_feature = atoi(val);
     }
+      
+#if XGBOOST_USE_BOOST
+      friend class boost::serialization::access;
+      template<class Archive> void serialize(Archive & ar, const unsigned int version)
+      {
+          ar & base_score;
+          ar & num_feature;
+          ar & num_class;
+          ar & saved_with_pbuffer;
+          //ar & reserved;
+      }
+#endif
   };
   // data fields
   // stored random seed
@@ -545,4 +577,7 @@ class BoostLearner : public rabit::Serializable {
 };
 }  // namespace learner
 }  // namespace xgboost
+
+//BOOST_CLASS_EXPORT_KEY(xgboost::learner::BoostLearner);
+
 #endif  // XGBOOST_LEARNER_LEARNER_INL_HPP_

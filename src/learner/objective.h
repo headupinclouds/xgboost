@@ -9,6 +9,7 @@
 
 #include <vector>
 #include "./dmatrix.h"
+#include "../utils/io.h"
 
 namespace xgboost {
 namespace learner {
@@ -59,6 +60,13 @@ class IObjFunction{
   virtual float ProbToMargin(float base_score) const {
     return base_score;
   }
+
+#if XGBOOST_USE_BOOST
+   // Empty serialize for pure virtual base class
+  friend class boost::serialization::access;
+  template<class Archive> void serialize(Archive & ar, const unsigned int version) {}
+#endif
+    
 };
 }  // namespace learner
 }  // namespace xgboost

@@ -86,6 +86,33 @@ class GBTree : public IGradBooster {
       fo.Write(BeginPtr(pred_counter), pred_counter.size() * sizeof(unsigned));
     }
   }
+    
+#if XGBOOST_USE_BOOST
+    friend class boost::serialization::access;
+    template <typename Archive> void serialize(Archive& ar, const unsigned int version)
+    {
+        boost::serialization::void_cast_register<GBTree, IGradBooster>();
+        if(Archive::is_loading::value)
+        {
+            ar & mparam;
+        }
+        else
+        {
+            auto p = mparam;
+            p.num_pbuffer = 0;
+            ar & p;
+        }
+        ar & mparam;
+        ar & trees;
+        ar & tree_info;
+
+        // Comment these two for SaveModel(...) above, with `with_pbuffer == false`
+        // Note: Could add a member variable for this
+        //ar & pred_buffer;
+        //ar & pred_counter;
+    }
+#endif
+    
   // initialize the predic buffer
   virtual void InitModel(void) {
     pred_buffer.clear(); pred_counter.clear();
@@ -490,6 +517,21 @@ class GBTree : public IGradBooster {
       utils::Check(buffer_index < num_pbuffer, "buffer_index exceed num_pbuffer");
       return (buffer_index + num_pbuffer * bst_group) * (size_leaf_vector + 1);
     }
+      
+#if XGBOOST_USE_BOOST
+      friend class boost::serialization::access;
+      template <typename Archive> void serialize(Archive& ar, const unsigned int version)
+      {
+          ar & num_trees;
+          ar & num_roots;
+          ar & num_pbuffer;
+          ar & num_feature;
+          ar & num_output_group;
+          ar & size_leaf_vector;
+          //ar & reserved;
+      }
+#endif
+      
   };
   // training parameter
   TrainParam tparam;
@@ -514,4 +556,7 @@ class GBTree : public IGradBooster {
 
 }  // namespace gbm
 }  // namespace xgboost
+
+//BOOST_CLASS_EXPORT_KEY(xgboost::gbm::GBTree);
+
 #endif  // XGBOOST_GBM_GBTREE_INL_HPP_

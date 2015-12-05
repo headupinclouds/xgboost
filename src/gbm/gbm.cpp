@@ -19,3 +19,5 @@ IGradBooster* CreateGradBooster(const char *name) {
 }  // namespace gbm
 }  // namespace xgboost
 
+//BOOST_CLASS_EXPORT_IMPLEMENT(xgboost::gbm::GBTree);
+//BOOST_CLASS_EXPORT_IMPLEMENT(xgboost::gbm::GBLinear);

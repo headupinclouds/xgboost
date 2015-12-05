@@ -14,6 +14,28 @@
 #include "./utils.h"
 #include "../sync/sync.h"
 
+// =*=*=*=*=*
+
+#define XGBOOST_USE_BOOST 1
+#if XGBOOST_USE_BOOST
+#include <boost/serialization/serialization.hpp>
+#include <boost/serialization/vector.hpp>
+#endif
+
+#define XGBOOST_SQUEEZE 1
+// TODO: fp16 for small additional gain?
+#if XGBOOST_SQUEEZE
+#include "half.hpp" // must be in path
+typedef int16_t xgboost_int_t;
+typedef uint16_t xgboost_uint_t;
+#define XGBOOST_HIGH_BIT 15
+#else
+typedef int32_t xgboost_int_t;
+typedef uint32_t xgboost_uint_t;
+#define XGBOOST_HIGH_BIT 31
+#endif
+// =*=*=*=*
+
 namespace xgboost {
 namespace utils {
 // reuse the definitions of streams

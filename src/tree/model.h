@@ -18,19 +18,6 @@
 #include "../utils/fmap.h"
 #include "../utils/utils.h"
 
-#define XGBOOST_SQUEEZE 1
-
-// TODO: fp16 for small additional gain?
-#if XGBOOST_SQUEEZE
-typedef int16_t xgboost_int_t;
-typedef uint16_t xgboost_uint_t;
-#define XGBOOST_HIGH_BIT 15
-#else
-typedef int32_t xgboost_int_t;
-typedef uint32_t xgboost_uint_t;
-#define XGBOOST_HIGH_BIT 31
-#endif
-
 namespace xgboost {
 namespace tree {
 /*!
@@ -81,6 +68,22 @@ class TreeModel {
       if (!strcmp("num_feature", name)) num_feature = atoi(val);
       if (!strcmp("size_leaf_vector", name)) size_leaf_vector = atoi(val);
     }
+      
+#if XGBOOST_USE_BOOST
+      // TreeModel<TSplitCond,TNodeStat>::Param
+      friend class boost::serialization::access;
+      template <typename Archive> void serialize(Archive& ar, const unsigned int version)
+      {
+          ar & num_roots;
+          ar & num_nodes;
+          ar & num_deleted;
+          ar & max_depth;
+          ar & num_feature;
+          ar & size_leaf_vector;
+          //ar & reserved;
+      }
+#endif
+      
   };
   /*! \brief tree node */
   class Node {
@@ -169,6 +172,35 @@ class TreeModel {
       this->sindex_ = std::numeric_limits<xgboost_uint_t>::max();
     }
       
+#if XGBOOST_USE_BOOST
+      // TreeModel<TSplitCond,TNodeStat>::Node
+      friend class boost::serialization::access;
+      template <typename Archive> void serialize(Archive& ar, const unsigned int version)
+      {
+          ar & parent_;
+          ar & cleft_;
+          ar & cright_;
+          ar & sindex_;
+          
+#if XGBOOST_SQUEEZE
+          half_float::detail::uint16 value_;
+          if(Archive::is_loading::value)
+          {
+              ar & value_;
+              info_.leaf_value = half_float::detail::half2float(value_);
+          }
+          else
+          {
+              value_ = half_float::detail::float2half<std::round_to_nearest>(info_.leaf_value);
+              ar & value_;
+          }
+#else
+          ar & info_.leaf_value;
+#endif
+          //ar & reserved;
+      }
+#endif
+            
    private:
     friend class TreeModel<TSplitCond, TNodeStat>;
     /*! 
@@ -179,6 +211,7 @@ class TreeModel {
       float leaf_value;
       TSplitCond split_cond;
     };
+
     // pointer to parent, highest bit is used to
     // indicate whether it's a left child or not
     xgboost_int_t parent_;
@@ -348,6 +381,31 @@ class TreeModel {
     fo.Write(BeginPtr(stats), sizeof(NodeStat) * nodes.size());
     if (param.size_leaf_vector != 0) fo.Write(leaf_vector);
   }
+    
+#if XGBOOST_USE_BOOST
+    virtual void do_nothing() {} // needed by boost
+
+    // TreeModel<TSplitCond,TNodeStat>
+    friend class boost::serialization::access;
+    template <typename Archive> void serialize(Archive& ar, const unsigned int version)
+    {
+        if(Archive::is_loading::value)
+        {
+            nodes.resize(0);
+            stats.resize(0); // undo resize(1) in constructor
+        }
+        
+        ar & param; 
+        ar & nodes;
+        ar & stats;
+
+        if(param.size_leaf_vector)
+        {
+            ar & leaf_vector;
+        }
+    }
+#endif
+    
   /*! 
    * \brief add child nodes to node
    * \param nid node id to add childs
@@ -476,6 +534,7 @@ class TreeModel {
       this->Dump(nodes[nid].cright(), fo, fmap, depth+1, with_stats);
     }
   }
+
 };
 
 /*! \brief node statistics used in regression tree */
@@ -487,7 +546,7 @@ struct RTreeNodeStat {
   /*! \brief weight of current node */
   float base_weight;
   /*! \brief number of child that is leaf node known up to now */
-  int   leaf_child_cnt;
+  xgboost_int_t leaf_child_cnt;
   /*! \brief print information of current stats to fo */
   inline void Print(std::stringstream &fo, bool is_leaf) const { // NOLINT(*)
     if (!is_leaf) {
@@ -496,12 +555,64 @@ struct RTreeNodeStat {
       fo << ",cover=" << sum_hess;
     }
   }
+    
+#if XGBOOST_USE_BOOST
+
+    friend class boost::serialization::access;
+    template <typename Archive> void serialize(Archive& ar, const unsigned int version)
+    {
+#if XGBOOST_SQUEEZE
+        half_float::detail::uint16 loss_chg_, sum_hess_, base_weight_;
+        if(Archive::is_loading::value)
+        {
+            ar & loss_chg_;
+            ar & sum_hess_;
+            ar & base_weight_;
+
+            loss_chg = half_float::detail::half2float(loss_chg_);
+            sum_hess = half_float::detail::half2float(sum_hess_);
+            base_weight = half_float::detail::half2float(base_weight_);
+        }
+        else
+        {
+            loss_chg_ = half_float::detail::float2half<std::round_to_nearest>(loss_chg);
+            sum_hess_ = half_float::detail::float2half<std::round_to_nearest>(sum_hess);
+            base_weight_ = half_float::detail::float2half<std::round_to_nearest>(base_weight);
+            
+            ar & loss_chg_;
+            ar & sum_hess_;
+            ar & base_weight_; // not needed
+        }
+#else
+        ar & loss_chg;
+        ar & sum_hess;
+        ar & base_weight;
+#endif
+        
+        ar & leaf_child_cnt;
+    }
+#endif // XGBOOST_USE_BOOST
+    
 };
 
 /*! \brief define regression tree to be the most common tree model */
 class RegTree: public TreeModel<bst_float, RTreeNodeStat>{
  public:
-  /*! 
+    
+#if XGBOOST_USE_BOOST
+    RegTree() {} // boost needs default constructor for pointer serialization
+    
+    typedef TreeModel<bst_float, RTreeNodeStat> Super;
+    
+    friend class boost::serialization::access;
+    template <typename Archive> void serialize(Archive& ar, const unsigned int version)
+    {
+        boost::serialization::void_cast_register<RegTree, Super>(); 
+        ar & boost::serialization::base_object<Super>(*this);
+    }
+#endif
+    
+  /*!
    * \brief dense feature vector that can be taken by RegTree
    * to do tranverse efficiently
    * and can be construct from sparse feature vector
@@ -516,6 +627,15 @@ class RegTree: public TreeModel<bst_float, RTreeNodeStat>{
       int flag;
     };
     std::vector<Entry> data;
+      
+#if XGBOOST_USE_BOOST
+      friend class boost::serialization::access;
+      template <typename Archive> void serialize(Archive& ar, const unsigned int version)
+      {
+          ar & data;
+      }
+#endif
+      
     /*! \brief intialize the vector with size vector */
     inline void Init(size_t size) {
       Entry e; e.flag = -1;
@@ -585,7 +705,7 @@ class RegTree: public TreeModel<bst_float, RTreeNodeStat>{
     }
   }
 };
-
 }  // namespace tree
 }  // namespace xgboost
+
 #endif  // XGBOOST_TREE_MODEL_H_

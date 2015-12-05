@@ -113,6 +113,15 @@ struct LossType {
     if (loss_type == kLogisticRaw) return "auc";
     return "rmse";
   }
+    
+#if XGBOOST_USE_BOOST
+    // Empty serialize for pure virtual base class
+    friend class boost::serialization::access;
+    template<class Archive> void serialize(Archive & ar, const unsigned int version)
+    {
+        ar & loss_type;
+    }
+#endif
 };
 
 /*! \brief objective function that only need to */
@@ -170,6 +179,18 @@ class RegLossObj : public IObjFunction {
     return loss.ProbToMargin(base_score);
   }
 
+#if XGBOOST_USE_BOOST
+    RegLossObj() {} // boost requires null constructor
+    // Empty serialize for pure virtual base class
+    friend class boost::serialization::access;
+    template<class Archive> void serialize(Archive & ar, const unsigned int version)
+    {
+        boost::serialization::void_cast_register<RegLossObj, IObjFunction>();
+        ar & scale_pos_weight;
+        ar & loss;
+    }
+#endif
+    
  protected:
   float scale_pos_weight;
   LossType loss;
@@ -236,6 +257,16 @@ class PoissonRegression : public IObjFunction {
   virtual const char* DefaultEvalMetric(void) const {
     return "poisson-nloglik";
   }
+    
+#if XGBOOST_USE_BOOST
+    // Empty serialize for pure virtual base class
+    friend class boost::serialization::access;
+    template<class Archive> void serialize(Archive & ar, const unsigned int version)
+    {
+        boost::serialization::void_cast_register<PoissonRegression, IObjFunction>();
+        ar & max_delta_step;
+    }
+#endif
 
  private:
   float max_delta_step;
@@ -333,6 +364,18 @@ class SoftmaxMultiClassObj : public IObjFunction {
     }
     if (prob == 0) preds = tmp;
   }
+    
+#if XGBOOST_USE_BOOST
+    // Empty serialize for pure virtual base class
+    friend class boost::serialization::access;
+    template<class Archive> void serialize(Archive & ar, const unsigned int version)
+    {
+        boost::serialization::void_cast_register<SoftmaxMultiClassObj, IObjFunction>();
+        ar & nclass;
+        ar & output_prob;
+    }
+#endif
+    
   // data field
   int nclass;
   int output_prob;
@@ -475,7 +518,19 @@ class LambdaRankObj : public IObjFunction {
    */
   virtual void GetLambdaWeight(const std::vector<ListEntry> &sorted_list,
                                std::vector<LambdaPair> *io_pairs) = 0;
-
+    
+#if XGBOOST_USE_BOOST
+    // Empty serialize for pure virtual base class
+    friend class boost::serialization::access;
+    template<class Archive> void serialize(Archive & ar, const unsigned int version)
+    {
+        boost::serialization::void_cast_register<LambdaRankObj, IObjFunction>();
+        ar & loss;
+        ar & num_pairsample;
+        ar & fix_list_weight;
+    }
+#endif
+    
  private:
   // loss function
   LossType loss;
@@ -492,6 +547,15 @@ class PairwiseRankObj: public LambdaRankObj{
  protected:
   virtual void GetLambdaWeight(const std::vector<ListEntry> &sorted_list,
                                std::vector<LambdaPair> *io_pairs) {}
+    
+#if XGBOOST_USE_BOOST
+    // Empty serialize for pure virtual base class
+    friend class boost::serialization::access;
+    template<class Archive> void serialize(Archive & ar, const unsigned int version)
+    {
+        ar & boost::serialization::base_object<LambdaRankObj>(*this);
+    }
+#endif
 };
 
 // beta version: NDCG lambda rank
@@ -545,6 +609,16 @@ class LambdaRankObjNDCG : public LambdaRankObj {
     }
     return static_cast<float>(sumdcg);
   }
+    
+#if XGBOOST_USE_BOOST
+    // Empty serialize for pure virtual base class
+    friend class boost::serialization::access;
+    template<class Archive> void serialize(Archive & ar, const unsigned int version)
+    {
+        boost::serialization::void_cast_register<LambdaRankObjNDCG, LambdaRankObj>();
+        ar & boost::serialization::base_object<LambdaRankObj>(*this);
+    }
+#endif
 };
 
 class LambdaRankObjMAP : public LambdaRankObj {
@@ -635,6 +709,15 @@ class LambdaRankObjMAP : public LambdaRankObj {
                        pairs[i].neg_index, &map_stats);
     }
   }
+#if XGBOOST_USE_BOOST
+    // Empty serialize for pure virtual base class
+    friend class boost::serialization::access;
+    template<class Archive> void serialize(Archive & ar, const unsigned int version)
+    {
+        boost::serialization::void_cast_register<LambdaRankObjMAP, LambdaRankObj>();
+        ar & boost::serialization::base_object<LambdaRankObj>(*this);
+    }
+#endif
 };
 
 }  // namespace learner

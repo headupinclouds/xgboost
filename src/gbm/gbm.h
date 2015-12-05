@@ -39,6 +39,12 @@ class IGradBooster {
    * \param with_pbuffer whether save out pbuffer
    */
   virtual void SaveModel(utils::IStream &fo, bool with_pbuffer) const = 0; // NOLINT(*)
+
+#if XGBOOST_USE_BOOST
+    friend class boost::serialization::access;
+    template <typename Archive> void serialize(Archive& ar, const unsigned int version) {}
+#endif
+    
   /*!
    * \brief initialize the model
    */
@@ -133,4 +139,5 @@ class IGradBooster {
 IGradBooster* CreateGradBooster(const char *name);
 }  // namespace gbm
 }  // namespace xgboost
+
 #endif  // XGBOOST_GBM_GBM_H_

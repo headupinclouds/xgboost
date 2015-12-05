@@ -44,6 +44,16 @@ class GBLinear : public IGradBooster {
   virtual void InitModel(void) {
     model.InitModel();
   }
+    
+#if XGBOOST_USE_BOOST
+    friend class boost::serialization::access;
+    template <typename Archive> void serialize(Archive& ar, const unsigned int version)
+    {
+        boost::serialization::void_cast_register<GBLinear, IGradBooster>();
+        ar & model;
+    }
+#endif
+    
   virtual void DoBoost(IFMatrix *p_fmat,
                        int64_t buffer_offset,
                        const BoosterInfo &info,
@@ -249,6 +259,17 @@ class GBLinear : public IGradBooster {
         if (!strcmp(name, "bst:num_feature")) num_feature = static_cast<unsigned>(atoi(val));
         if (!strcmp(name, "num_output_group")) num_output_group = atoi(val);
       }
+        
+#if XGBOOST_USE_BOOST
+        friend class boost::serialization::access;
+        template <typename Archive> void serialize(Archive& ar, const unsigned int version)
+        {
+            ar & num_feature;
+            ar & num_output_group;
+            ar & reserved;
+        }
+#endif
+        
     };
     // parameter
     Param param;
@@ -271,6 +292,16 @@ class GBLinear : public IGradBooster {
       utils::Assert(fi.Read(&param, sizeof(Param)) != 0, "Load LinearBooster");
       fi.Read(&weight);
     }
+      
+#if XGBOOST_USE_BOOST
+    friend class boost::serialization::access;
+    template <typename Archive> void serialize(Archive& ar, const unsigned int version)
+    {
+        ar & param;
+        ar & weight;
+    }
+#endif
+      
     // model bias
     inline float* bias(void) {
       return &weight[param.num_feature * param.num_output_group];
@@ -290,4 +321,7 @@ class GBLinear : public IGradBooster {
 
 }  // namespace gbm
 }  // namespace xgboost
+
+//BOOST_CLASS_EXPORT_KEY(xgboost::gbm::GBLinear);
+
 #endif  // XGBOOST_GBM_GBLINEAR_INL_HPP_
