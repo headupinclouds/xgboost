@@ -1,4 +1,4 @@
-Fork of original [https://github.com/dmlc/xgboos](xgboost) with CMake support and the [https://github.com/ruslo/hunter](Hunter) CMake package manager with optional boost serialization (dependencies managed by hunter).
+Fork of original [https://github.com/dmlc/xgboost](xgboost) with CMake support and the [https://github.com/ruslo/hunter](Hunter) CMake package manager with optional boost serialization (dependencies managed by hunter).
 
 ```
 cd xgboost
