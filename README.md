@@ -1,3 +1,10 @@
+Fork of original [xgboost](https://github.com/dmlc/xgboost) with CMake support and use of the [Hunter](https://github.com/ruslo/hunter) CMake package manager with optional boost serialization (dependencies managed by hunter).
+
+```
+cd xgboost
+cmake -H. -B_builds -DHUNTER_STATUS_DEBUG=ON -DCMAKE_BUILD_TYPE=Release
+```
+
 <img src=https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/logo-m/xgboost.png width=135/>  eXtreme Gradient Boosting
 ===========
 [![Build Status](https://travis-ci.org/dmlc/xgboost.svg?branch=master)](https://travis-ci.org/dmlc/xgboost)
