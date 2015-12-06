@@ -177,12 +177,16 @@ class TreeModel {
       friend class boost::serialization::access;
       template <typename Archive> void serialize(Archive& ar, const unsigned int version)
       {
-          ar & parent_;
+          //ar & parent_; /* TODO: recreate this at load time */
           ar & cleft_;
-          ar & cright_;
-          ar & sindex_;
-          
+
 #if XGBOOST_SQUEEZE
+          if(cleft_ >= 0)
+          {
+              ar & cright_;
+              ar & sindex_;
+          }
+          
           half_float::detail::uint16 value_;
           if(Archive::is_loading::value)
           {
@@ -195,9 +199,12 @@ class TreeModel {
               ar & value_;
           }
 #else
+          ar & parent_;
+          ar & cright_;
+          ar & sindex_;
           ar & info_.leaf_value;
 #endif
-          //ar & reserved;
+          //ar & reserved; /* NOT NEEDED */
       }
 #endif
             
@@ -397,8 +404,15 @@ class TreeModel {
         
         ar & param; 
         ar & nodes;
-        ar & stats;
-
+        //ar & stats;
+        
+        // Sacrifice stats for disk space:
+        if(Archive::is_loading::value)
+        {
+            stats.resize(nodes.size());
+            memset(&stats[0], 0, sizeof(TNodeStat) * stats.size());
+        }
+        
         if(param.size_leaf_vector)
         {
             ar & leaf_vector;
