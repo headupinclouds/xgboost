@@ -4,10 +4,11 @@ include("cmake/HunterGate.cmake")
 
 ### Hunter snapshot that will be used ###
 HunterGate(
-    URL "https://github.com/ruslo/hunter/archive/v0.8.13.tar.gz"
-    SHA1 "7103f0ab481523ca93a06c1c55abcd56741d3a97"
-)
+  URL "https://github.com/ruslo/hunter/archive/v0.12.30.tar.gz"
+  SHA1 "4069d2d2c6021784f1a786b13cc6192e50303782"
+  )
 
+project(xgboost VERSION 0.1)
 
 # -Wno-narrowing  = Don't warn about type narrowing
 include(CheckCXXCompilerFlag)
@@ -21,8 +22,6 @@ hunter_add_package(Sugar)
 include("${SUGAR_ROOT}/cmake/Sugar")
 include(sugar_include)
 include(CheckLibraryExists)
-
-project(xgboost VERSION 0.1)
 
 string(COMPARE EQUAL "${CMAKE_GENERATOR}" "Xcode" is_xcode)
 
@@ -41,5 +40,21 @@ endif()
 sugar_include(.)
 
 option(SKIP_INSTALL "Skip the package install" OFF)
+option(XGBOOST_USE_BOOST "Use boost serialization" ON)
+option(XGBOOST_USE_HALF "Support half precision floating point storage" ON)
+
+### half ###
+if(XGBOOST_USE_HALF)
+  hunter_add_package(half)
+  find_package(half CONFIG REQUIRED)
+  add_definitions(-DXGBOOST_SQUEEZE=1)
+endif()
+
+### Boost ###
+if(XGBOOST_USE_BOOST)
+  hunter_add_package(Boost COMPONENTS filesystem system serialization iostreams)
+  find_package(Boost CONFIG REQUIRED filesystem system serialization iostreams)
+  add_definitions(-DXGBOOST_USE_BOOST=1)
+endif()
 
 add_subdirectory(src)

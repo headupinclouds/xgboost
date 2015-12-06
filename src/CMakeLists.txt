@@ -3,7 +3,7 @@ include(sugar_include)
 sugar_include(.)
 
 ### Always build xgboost as a library
-add_library (xgboost ${XGBOOST_SOURCE} ${RABIT_SOURCE})
+add_library(xgboost ${XGBOOST_SOURCE} ${RABIT_SOURCE})
 
 ### Optionally build the executable 
 option(XGBOOST_BUILD_EXAMPLES OFF)
@@ -11,6 +11,20 @@ if(XGBOOST_BUILD_EXAMPLES)
   message("XGBOOST_BUILD_EXAMPLES ${XGBOOST_BUILD_EXAMPLES}.......................................")
   add_executable(xgboost_main ${XGBOOST_EXE_SOURCE})
   target_link_libraries(xgboost_main xgboost)
+endif()
+
+### If you want to take advantage of boost serialization ...
+if(XGBOOST_USE_BOOST)
+  target_link_libraries(xgboost PRIVATE
+	Boost::filesystem 
+	Boost::system 
+	Boost::serialization 
+	Boost::iostreams
+	)
+endif()
+
+if(XGBOOST_USE_HALF)
+  target_link_libraries(xgboost PRIVATE half::half)
 endif()
 
 # Some platforms (e.g. Linux) need separate math library

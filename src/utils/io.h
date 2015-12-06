@@ -23,9 +23,8 @@
 #endif
 
 #define XGBOOST_SQUEEZE 1
-// TODO: fp16 for small additional gain?
 #if XGBOOST_SQUEEZE
-#include "half.hpp" // must be in path
+#include "half/half.hpp" // must be in path
 typedef int16_t xgboost_int_t;
 typedef uint16_t xgboost_uint_t;
 #define XGBOOST_HIGH_BIT 15
