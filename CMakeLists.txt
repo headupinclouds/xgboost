@@ -43,18 +43,4 @@ option(SKIP_INSTALL "Skip the package install" OFF)
 option(XGBOOST_USE_BOOST "Use boost serialization" ON)
 option(XGBOOST_USE_HALF "Support half precision floating point storage" ON)
 
-### half ###
-if(XGBOOST_USE_HALF)
-  hunter_add_package(half)
-  find_package(half CONFIG REQUIRED)
-  add_definitions(-DXGBOOST_SQUEEZE=1)
-endif()
-
-### Boost ###
-if(XGBOOST_USE_BOOST)
-  hunter_add_package(Boost COMPONENTS filesystem system serialization iostreams)
-  find_package(Boost CONFIG REQUIRED filesystem system serialization iostreams)
-  add_definitions(-DXGBOOST_USE_BOOST=1)
-endif()
-
 add_subdirectory(src)

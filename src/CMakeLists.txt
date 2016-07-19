@@ -15,22 +15,28 @@ endif()
 
 ### If you want to take advantage of boost serialization ...
 if(XGBOOST_USE_BOOST)
-  target_link_libraries(xgboost PRIVATE
+  hunter_add_package(Boost COMPONENTS filesystem system serialization iostreams)
+  find_package(Boost CONFIG REQUIRED filesystem system serialization iostreams)
+  target_link_libraries(xgboost PUBLIC
 	Boost::filesystem 
 	Boost::system 
 	Boost::serialization 
 	Boost::iostreams
 	)
+  target_compile_definitions(xgboost PUBLIC XGBOOST_USE_BOOST=1)
 endif()
 
 if(XGBOOST_USE_HALF)
-  target_link_libraries(xgboost PRIVATE half::half)
+  hunter_add_package(half)
+  find_package(half CONFIG REQUIRED)
+  target_link_libraries(xgboost PUBLIC half::half)
+  target_compile_definitions(xgboost PUBLIC XGBOOST_SQUEEZE=1)
 endif()
 
 # Some platforms (e.g. Linux) need separate math library
 check_library_exists(m pow "" LIB_M_REQUIRED)
 if(LIB_M_REQUIRED)
-  target_link_libraries(xgboost PRIVATE m)
+  target_link_libraries(xgboost PUBLIC m)
 endif()
 
 message("=========SKIP_INSTALL========: ${SKIP_INSTALL}")
@@ -54,8 +60,14 @@ write_basic_package_version_file(
     "${version_config}" COMPATIBILITY SameMajorVersion
 )
 
-# Note: variable 'targets_export_name' used
-configure_file("cmake/Config.cmake.in" "${project_config}" @ONLY)
+# Use variables:
+#   * targets_export_name
+#   * PROJECT_NAME
+configure_package_config_file(
+    "cmake/Config.cmake.in"
+    "${project_config}"
+    INSTALL_DESTINATION "${config_install_dir}"
+)
 
 install(
     TARGETS ${PROJECT_NAME}
