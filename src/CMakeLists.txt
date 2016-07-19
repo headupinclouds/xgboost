@@ -46,6 +46,8 @@ set(project_config "${generated_dir}/${PROJECT_NAME}Config.cmake")
 set(targets_export_name "${PROJECT_NAME}Targets")
 set(namespace "${PROJECT_NAME}::")
 
+set(include_install_dir "include")
+
 include(CMakePackageConfigHelpers)
 
 write_basic_package_version_file(
@@ -65,9 +67,14 @@ install(
 )
 
 install(
-    FILES
-    ${XGBOOST_PUBLIC_HDR}
+    DIRECTORY
+        "${PROJECT_SOURCE_DIR}/java"
+        "${PROJECT_SOURCE_DIR}/subtree"
+        "${PROJECT_SOURCE_DIR}/R-package"
+        "${PROJECT_SOURCE_DIR}/src"
+        "${PROJECT_SOURCE_DIR}/wrapper"
     DESTINATION "${include_install_dir}/xgboost"
+    FILES_MATCHING PATTERN "*.h"
 )
 
 install(
