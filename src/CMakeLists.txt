@@ -6,7 +6,7 @@ sugar_include(.)
 add_library(xgboost ${XGBOOST_SOURCE} ${RABIT_SOURCE})
 
 ### Optionally build the executable
-option(XGBOOST_BUILD_EXAMPLES OFF)
+option(XGBOOST_BUILD_EXAMPLES "Build xgboost examples" OFF)
 if(XGBOOST_BUILD_EXAMPLES)
   message("XGBOOST_BUILD_EXAMPLES ${XGBOOST_BUILD_EXAMPLES}.......................................")
   add_executable(xgboost_main ${XGBOOST_EXE_SOURCE})
