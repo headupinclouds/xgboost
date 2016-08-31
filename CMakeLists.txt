@@ -23,11 +23,9 @@ include("${SUGAR_ROOT}/cmake/Sugar")
 include(sugar_include)
 include(CheckLibraryExists)
 
-string(COMPARE EQUAL "${CMAKE_GENERATOR}" "Xcode" is_xcode)
-
 # The various compiler checks take > 10 seconds on ios "Try OpenMP CXX flag = [-openmp]" in xcode
 # TODO: Investigate why this is so much slower with ios toolchain
-if(NOT is_xcode) 
+if(NOT XCODE)
   find_package( OpenMP )
   if(OPENMP_FOUND)
     message("OPENMP FOUND")
