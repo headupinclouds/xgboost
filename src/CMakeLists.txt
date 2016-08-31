@@ -5,7 +5,7 @@ sugar_include(.)
 ### Always build xgboost as a library
 add_library(xgboost ${XGBOOST_SOURCE} ${RABIT_SOURCE})
 
-### Optionally build the executable 
+### Optionally build the executable
 option(XGBOOST_BUILD_EXAMPLES OFF)
 if(XGBOOST_BUILD_EXAMPLES)
   message("XGBOOST_BUILD_EXAMPLES ${XGBOOST_BUILD_EXAMPLES}.......................................")
@@ -18,11 +18,11 @@ if(XGBOOST_USE_BOOST)
   hunter_add_package(Boost COMPONENTS filesystem system serialization iostreams)
   find_package(Boost CONFIG REQUIRED filesystem system serialization iostreams)
   target_link_libraries(xgboost PUBLIC
-	Boost::filesystem 
-	Boost::system 
-	Boost::serialization 
-	Boost::iostreams
-	)
+  Boost::filesystem
+  Boost::system
+  Boost::serialization
+  Boost::iostreams
+  )
   target_compile_definitions(xgboost PUBLIC XGBOOST_USE_BOOST=1)
 endif()
 
