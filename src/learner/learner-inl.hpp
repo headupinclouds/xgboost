@@ -84,7 +84,7 @@ class BoostLearner : public rabit::Serializable {
    * \param val  value of the parameter
    */
   inline void SetParam(const char *name, const char *val) {
-    using namespace std; // DJH
+    using namespace std;
     // in this version, bst: prefix is no longer required
     if (strncmp(name, "bst:", 4) != 0) {
       std::string n = "bst:"; n += name;
@@ -423,7 +423,7 @@ class BoostLearner : public rabit::Serializable {
                       std::vector<float> *out_preds,
                       unsigned ntree_limit = 0,
                       bool pred_leaf = false) const {
-    if (pred_leaf) { // DJH
+    if (pred_leaf) {
       gbm_->PredictLeaf(data.fmat(), data.info.info, out_preds, ntree_limit);
     } else {
       this->PredictRaw(data, out_preds, ntree_limit);
@@ -514,7 +514,7 @@ class BoostLearner : public rabit::Serializable {
   inline void PredictRaw(const DMatrix &data,
                          std::vector<float> *out_preds,
                          unsigned ntree_limit = 0) const {
-    gbm_->Predict(data.fmat(), this->FindBufferOffset(data), // DJH
+    gbm_->Predict(data.fmat(), this->FindBufferOffset(data),
                   data.info.info, out_preds, ntree_limit);
     // add base margin
     std::vector<float> &preds = *out_preds;
@@ -560,7 +560,7 @@ class BoostLearner : public rabit::Serializable {
      * \param val value of the parameter
      */
     inline void SetParam(const char *name, const char *val) {
-      using namespace std; // DJH
+      using namespace std;
       if (!strcmp("base_score", name)) base_score = static_cast<float>(atof(val));
       if (!strcmp("num_class", name)) num_class = atoi(val);
       if (!strcmp("bst:num_feature", name)) num_feature = atoi(val);
@@ -628,7 +628,7 @@ class BoostLearner : public rabit::Serializable {
         :mat_(mat), buffer_offset_(buffer_offset), num_row_(num_row) {}
   };
   // find internal bufer offset for certain matrix, if not exist, return -1
-  inline int64_t FindBufferOffset(const DMatrix &mat) const { // DJH
+  inline int64_t FindBufferOffset(const DMatrix &mat) const {
     for (size_t i = 0; i < cache_.size(); ++i) {
       if (cache_[i].mat_ == &mat && mat.cache_learner_ptr_ == this) {
         if (cache_[i].num_row_ == mat.info.num_row()) {
