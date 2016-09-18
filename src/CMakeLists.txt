@@ -5,6 +5,12 @@ sugar_include(.)
 ### Always build xgboost as a library
 add_library(xgboost ${XGBOOST_SOURCE} ${RABIT_SOURCE})
 
+if(XGBOOST_DO_LEAN)
+  target_compile_definitions(xgboost PUBLIC XGBOOST_DO_LEAN=1)
+else()
+  target_compile_definitions(xgboost PUBLIC XGBOOST_DO_LEAN=0)
+endif()
+
 ### Optionally build the executable
 option(XGBOOST_BUILD_EXAMPLES "Build xgboost examples" OFF)
 if(XGBOOST_BUILD_EXAMPLES)
