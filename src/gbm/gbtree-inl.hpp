@@ -43,6 +43,9 @@ class GBTree : public IGradBooster {
     if (trees.size() == 0) mparam.SetParam(name, val);
   }
   virtual void LoadModel(utils::IStream &fi, bool with_pbuffer) { // NOLINT(*)
+#if XGBOOST_DO_LEAN
+    assert(false);
+#else
     this->Clear();
     XGBOOST_STATIC_ASSERT(sizeof(ModelParam) % sizeof(uint64_t) == 0)
     utils::Check(fi.Read(&mparam, sizeof(ModelParam)) != 0,
@@ -65,8 +68,12 @@ class GBTree : public IGradBooster {
       utils::Check(fi.Read(&pred_counter[0], pred_counter.size() * sizeof(unsigned)) != 0,
                    "GBTree: invalid model file");
     }
+#endif
   }
   virtual void SaveModel(utils::IStream &fo, bool with_pbuffer) const { // NOLINT(*)
+#if XGBOOST_DO_LEAN
+    assert(false);
+#else
     utils::Assert(mparam.num_trees == static_cast<int>(trees.size()), "GBTree");
     if (with_pbuffer) {
       fo.Write(&mparam, sizeof(ModelParam));
@@ -85,6 +92,7 @@ class GBTree : public IGradBooster {
       fo.Write(BeginPtr(pred_buffer), pred_buffer.size() * sizeof(float));
       fo.Write(BeginPtr(pred_counter), pred_counter.size() * sizeof(unsigned));
     }
+#endif
   }
     
 #if XGBOOST_USE_BOOST
@@ -115,17 +123,25 @@ class GBTree : public IGradBooster {
     
   // initialize the predic buffer
   virtual void InitModel(void) {
+#if XGBOOST_DO_LEAN
+    assert(false);
+#else
     pred_buffer.clear(); pred_counter.clear();
     pred_buffer.resize(mparam.PredBufferSize(), 0.0f);
     pred_counter.resize(mparam.PredBufferSize(), 0);
     utils::Assert(mparam.num_trees == 0, "GBTree: model already initialized");
     utils::Assert(trees.size() == 0, "GBTree: model already initialized");
+#endif
   }
   virtual void ResetPredBuffer(size_t num_pbuffer) {
+#if XGBOOST_DO_LEAN
+    assert(false);
+#else
     mparam.num_pbuffer = static_cast<int64_t>(num_pbuffer);
     pred_buffer.clear(); pred_counter.clear();
     pred_buffer.resize(mparam.PredBufferSize(), 0.0f);
     pred_counter.resize(mparam.PredBufferSize(), 0);
+#endif
   }
   virtual bool AllowLazyCheckPoint(void) const {
     return !(tparam.distcol_mode != 0  && mparam.num_output_group != 1);
@@ -134,6 +150,10 @@ class GBTree : public IGradBooster {
                        int64_t buffer_offset,
                        const BoosterInfo &info,
                        std::vector<bst_gpair> *in_gpair) {
+      
+#if XGBOOST_DO_LEAN
+    assert(false);
+#else
     const std::vector<bst_gpair> &gpair = *in_gpair;
     std::vector<std::vector<tree::RegTree*> > new_trees;
     if (mparam.num_output_group == 1) {
@@ -155,6 +175,7 @@ class GBTree : public IGradBooster {
     for (int gid = 0; gid < mparam.num_output_group; ++gid) {
       this->CommitModel(new_trees[gid], gid);
     }
+#endif
   }
   virtual void Predict(IFMatrix *p_fmat,
                        int64_t buffer_offset,
@@ -201,6 +222,9 @@ class GBTree : public IGradBooster {
                        std::vector<float> *out_preds,
                        unsigned ntree_limit,
                        unsigned root_index) {
+#if XGBOOST_DO_LEAN
+    assert(false);
+#else
     if (thread_temp.size() == 0) {
       thread_temp.resize(1, tree::RegTree::FVec());
       thread_temp[0].Init(mparam.num_feature);
@@ -212,11 +236,15 @@ class GBTree : public IGradBooster {
                  &(*out_preds)[gid], mparam.num_output_group,
                  ntree_limit);
     }
+#endif
   }
   virtual void PredictLeaf(IFMatrix *p_fmat,
                            const BoosterInfo &info,
                            std::vector<float> *out_preds,
                            unsigned ntree_limit) {
+#if XGBOOST_DO_LEAN
+    assert(false);
+#else
     int nthread;
     #pragma omp parallel
     {
@@ -227,13 +255,18 @@ class GBTree : public IGradBooster {
       thread_temp[i].Init(mparam.num_feature);
     }
     this->PredPath(p_fmat, info, out_preds, ntree_limit);
+#endif
   }
   virtual std::vector<std::string> DumpModel(const utils::FeatMap& fmap, int option) {
+#if XGBOOST_DO_LEAN
+    assert(false);
+#else
     std::vector<std::string> dump;
     for (size_t i = 0; i < trees.size(); i++) {
       dump.push_back(trees[i]->DumpModel(fmap, option&1));
     }
     return dump;
+#endif
   }
 
  protected:
@@ -252,6 +285,9 @@ class GBTree : public IGradBooster {
   }
   // initialize updater before using them
   inline void InitUpdater(void) {
+#if XGBOOST_DO_LEAN
+    assert(false);
+#else
     if (tparam.updater_initialized != 0) return;
     for (size_t i = 0; i < updaters.size(); ++i) {
       delete updaters[i];
@@ -269,6 +305,7 @@ class GBTree : public IGradBooster {
       pstr = std::strtok(NULL, ",");
     }
     tparam.updater_initialized = 1;
+#endif
   }
   // do group specific group
   inline std::vector<tree::RegTree*>
@@ -277,7 +314,10 @@ class GBTree : public IGradBooster {
                 int64_t buffer_offset,
                 const BoosterInfo &info,
                 int bst_group) {
-    std::vector<tree::RegTree *> new_trees;
+      std::vector<tree::RegTree *> new_trees;
+#if XGBOOST_DO_LEAN
+      assert(false);
+#else
     this->InitUpdater();
     // create the trees
     for (int i = 0; i < tparam.num_parallel_tree; ++i) {
@@ -305,15 +345,20 @@ class GBTree : public IGradBooster {
                                    *new_trees[0],
                                    updaters.back()->GetLeafPosition());
     }
+#endif
     return new_trees;
   }
   // commit new trees all at once
   inline void CommitModel(const std::vector<tree::RegTree*> &new_trees, int bst_group) {
+#if XGBOOST_DO_LEAN
+    assert(false);
+#else
     for (size_t i = 0; i < new_trees.size(); ++i) {
       trees.push_back(new_trees[i]);
       tree_info.push_back(bst_group);
     }
     mparam.num_trees += static_cast<int>(new_trees.size());
+#endif
   }
   // update buffer by pre-cached position
   inline void UpdateBufferByPosition(IFMatrix *p_fmat,
@@ -321,6 +366,9 @@ class GBTree : public IGradBooster {
                                      int bst_group,
                                      const tree::RegTree &new_tree,
                                      const int* leaf_position) {
+#if XGBOOST_DO_LEAN
+      assert(false);
+#else
     const std::vector<bst_uint> &rowset = p_fmat->buffered_rowset();
     const bst_omp_uint ndata = static_cast<bst_omp_uint>(rowset.size());
     #pragma omp parallel for schedule(static)
@@ -336,6 +384,7 @@ class GBTree : public IGradBooster {
       }
       pred_counter[bid] += tparam.num_parallel_tree;
     }
+#endif
   }
   // make a prediction for a single instance
   inline void Pred(const RowBatch::Inst &inst,
@@ -392,6 +441,9 @@ class GBTree : public IGradBooster {
                        const BoosterInfo &info,
                        std::vector<float> *out_preds,
                        unsigned ntree_limit) {
+#if XGBOOST_DO_LEAN
+    assert(false);
+#else
     // number of valid trees
     if (ntree_limit == 0 || ntree_limit > trees.size()) {
       ntree_limit = static_cast<unsigned>(trees.size());
@@ -418,6 +470,7 @@ class GBTree : public IGradBooster {
         feats.Drop(batch[i]);
       }
     }
+#endif
   }
 
   // --- data structure ---

@@ -54,6 +54,9 @@ class BoostLearner : public rabit::Serializable {
    * \param mats array of pointers to matrix whose prediction result need to be cached
    */
   inline void SetCacheData(const std::vector<DMatrix*>& mats) {
+#if XGBOOST_DO_LEAN
+    assert(false);
+#else
     utils::Assert(cache_.size() == 0, "can only call cache data once");
     // assign buffer index
     size_t buffer_size = 0;
@@ -73,6 +76,7 @@ class BoostLearner : public rabit::Serializable {
                    static_cast<unsigned long>(buffer_size)); // NOLINT(*)
     this->SetParam("num_pbuffer", str_temp);
     this->pred_buffer_size = buffer_size;
+#endif
   }
   /*!
    * \brief set parameters from outside
@@ -80,7 +84,7 @@ class BoostLearner : public rabit::Serializable {
    * \param val  value of the parameter
    */
   inline void SetParam(const char *name, const char *val) {
-    using namespace std;
+    using namespace std; // DJH
     // in this version, bst: prefix is no longer required
     if (strncmp(name, "bst:", 4) != 0) {
       std::string n = "bst:"; n += name;
@@ -131,6 +135,9 @@ class BoostLearner : public rabit::Serializable {
   // this is an internal function
   // initialize the trainer, called at InitModel and LoadModel
   inline void InitTrainer(bool calc_num_feature = true) {
+#if XGBOOST_DO_LEAN
+      assert(false);
+#else
     if (calc_num_feature) {
       // estimate feature bound
       unsigned num_feature = 0;
@@ -145,11 +152,15 @@ class BoostLearner : public rabit::Serializable {
     char str_temp[25];
     utils::SPrintf(str_temp, sizeof(str_temp), "%d", mparam.num_feature);
     this->SetParam("bst:num_feature", str_temp);
+#endif
   }
   /*!
    * \brief initialize the model
    */
   inline void InitModel(void) {
+#if XGBOOST_DO_LEAN
+      assert(false);
+#else
     this->InitTrainer();
     // initialize model
     this->InitObjGBM();
@@ -157,6 +168,7 @@ class BoostLearner : public rabit::Serializable {
     mparam.base_score = obj_->ProbToMargin(mparam.base_score);
     // initialize GBM model
     gbm_->InitModel();
+#endif
   }
   /*!
    * \brief load model from stream
@@ -165,6 +177,9 @@ class BoostLearner : public rabit::Serializable {
    */
   inline void LoadModel(utils::IStream &fi,  // NOLINT(*)
                         bool calc_num_feature = true) {
+#if XGBOOST_USE_BOOST
+    assert(false);
+#else
     XGBOOST_STATIC_ASSERT(sizeof(ModelParam) % sizeof(uint64_t) == 0)
     utils::Check(fi.Read(&mparam, sizeof(ModelParam)) != 0,
                  "BoostLearner: wrong model format");
@@ -196,22 +211,34 @@ class BoostLearner : public rabit::Serializable {
     if (mparam.saved_with_pbuffer == 0) {
       gbm_->ResetPredBuffer(pred_buffer_size);
     }
+#endif
   }
   // rabit load model from rabit checkpoint
   virtual void Load(rabit::Stream *fi) {
+#if XGBOOST_USE_BOOST
+    assert(false);
+#else
     // for row split, we should not keep pbuffer
     this->LoadModel(*fi, false);
+#endif
   }
   // rabit save model to rabit checkpoint
   virtual void Save(rabit::Stream *fo) const {
+#if XGBOOST_USE_BOOST
+    assert(false);
+#else
     // for row split, we should not keep pbuffer
     this->SaveModel(*fo, distributed_mode != 2);
+#endif
   }
   /*!
    * \brief load model from file
    * \param fname file name
    */
   inline void LoadModel(const char *fname) {
+#if XGBOOST_USE_BOOST
+    assert(false);
+#else
     utils::IStream *fi = utils::IStream::Create(fname, "r");
     std::string header; header.resize(4);
     // check header for different binary encode
@@ -230,14 +257,19 @@ class BoostLearner : public rabit::Serializable {
       this->LoadModel(*fi, true);
     }
     delete fi;
+#endif
   }
   inline void SaveModel(utils::IStream &fo, bool with_pbuffer) const { // NOLINT(*)
+#if XGBOOST_USE_BOOST
+    assert(false);
+#else
     ModelParam p = mparam;
     p.saved_with_pbuffer = static_cast<int>(with_pbuffer);
     fo.Write(&p, sizeof(ModelParam));
     fo.Write(name_obj_);
     fo.Write(name_gbm_);
     gbm_->SaveModel(fo, with_pbuffer);
+#endif
   }
     
 #if XGBOOST_USE_BOOST
@@ -265,6 +297,9 @@ class BoostLearner : public rabit::Serializable {
    * \param with_pbuffer whether save pbuffer together
    */
   inline void SaveModel(const char *fname, bool with_pbuffer) const {
+#if XGBOOST_USE_BOOST
+    assert(false);
+#else
     utils::IStream *fo = utils::IStream::Create(fname, "w");
     if (save_base64 != 0 || !strcmp(fname, "stdout")) {
       fo->Write("bs64\t", 5);
@@ -276,6 +311,7 @@ class BoostLearner : public rabit::Serializable {
       this->SaveModel(*fo, with_pbuffer);
     }
     delete fo;
+#endif
   }
   /*!
    * \brief check if data matrix is ready to be used by training,
@@ -283,6 +319,9 @@ class BoostLearner : public rabit::Serializable {
    * \param p_train pointer to the matrix used by training
    */
   inline void CheckInit(DMatrix *p_train) {
+#if XGBOOST_DO_LEAN
+    assert(false);
+#else
     int ncol = static_cast<int>(p_train->info.info.num_col);
     std::vector<bool> enabled(ncol, true);
     // set max row per batch to limited value
@@ -300,6 +339,7 @@ class BoostLearner : public rabit::Serializable {
     if (p_train->magic == kMagicPage) {
       this->SetParam("updater", "grow_histmaker,prune");
     }
+#endif
   }
   /*!
    * \brief update the model for one iteration
@@ -307,12 +347,16 @@ class BoostLearner : public rabit::Serializable {
    * \param p_train pointer to the data matrix
    */
   inline void UpdateOneIter(int iter, const DMatrix &train) {
+#if XGBOOST_DO_LEAN
+      assert(false);
+#else
     if (seed_per_iteration != 0 || rabit::IsDistributed()) {
       random::Seed(this->seed * kRandSeedMagic + iter);
     }
     this->PredictRaw(train, &preds_);
     obj_->GetGradient(preds_, train.info, iter, &gpair_);
     gbm_->DoBoost(train.fmat(), this->FindBufferOffset(train), train.info.info, &gpair_);
+#endif
   }
   /*!
    * \brief whether model allow lazy checkpoint
@@ -331,6 +375,10 @@ class BoostLearner : public rabit::Serializable {
                                  const std::vector<const DMatrix*> &evals,
                                  const std::vector<std::string> &evname) {
     std::string res;
+      
+#if XGBOOST_DO_LEAN
+    assert(false);
+#else
     char tmp[256];
     utils::SPrintf(tmp, sizeof(tmp), "[%d]", iter);
     res = tmp;
@@ -339,6 +387,7 @@ class BoostLearner : public rabit::Serializable {
       obj_->EvalTransform(&preds_);
       res += evaluator_.Eval(evname[i].c_str(), preds_, evals[i]->info, distributed_mode == 2);
     }
+#endif
     return res;
   }
   /*!
@@ -348,6 +397,10 @@ class BoostLearner : public rabit::Serializable {
    * \return a pair of <evaluation name, result>
    */
   std::pair<std::string, float> Evaluate(const DMatrix &data, std::string metric) {
+#if XGBOOST_DO_LEAN
+    assert(false);
+    return std::make_pair(std::string(), 0.f);
+#else
     if (metric == "auto") metric = obj_->DefaultEvalMetric();
     IEvaluator *ev = CreateEvaluator(metric.c_str());
     this->PredictRaw(data, &preds_);
@@ -355,6 +408,7 @@ class BoostLearner : public rabit::Serializable {
     float res = ev->Eval(preds_, data.info);
     delete ev;
     return std::make_pair(metric, res);
+#endif
   }
   /*!
    * \brief get prediction
@@ -369,7 +423,7 @@ class BoostLearner : public rabit::Serializable {
                       std::vector<float> *out_preds,
                       unsigned ntree_limit = 0,
                       bool pred_leaf = false) const {
-    if (pred_leaf) {
+    if (pred_leaf) { // DJH
       gbm_->PredictLeaf(data.fmat(), data.info.info, out_preds, ntree_limit);
     } else {
       this->PredictRaw(data, out_preds, ntree_limit);
@@ -395,6 +449,9 @@ class BoostLearner : public rabit::Serializable {
                       bool output_margin,
                       std::vector<float> *out_preds,
                       unsigned ntree_limit = 0) const {
+#if XGBOOST_DO_LEAN
+    assert(false);
+#else
     gbm_->Predict(inst, out_preds, ntree_limit);
     if (out_preds->size() == 1) {
       (*out_preds)[0] += mparam.base_score;
@@ -402,10 +459,16 @@ class BoostLearner : public rabit::Serializable {
     if (!output_margin) {
       obj_->PredTransform(out_preds);
     }
+#endif
   }
   /*! \brief dump model out */
   inline std::vector<std::string> DumpModel(const utils::FeatMap& fmap, int option) {
+#if XGBOOST_DO_LEAN
+    assert(false);
+    return std::vector<std::string>();
+#else
     return gbm_->DumpModel(fmap, option);
+#endif
   }
 
  protected:
@@ -432,10 +495,14 @@ class BoostLearner : public rabit::Serializable {
    * \brief additional default value for specific objs
    */
   inline void InitAdditionDefaultParam(void) {
+#if XGBOOST_DO_LEAN
+    assert(false);
+#else
     if (name_obj_ == "count:poisson") {
       obj_->SetParam("max_delta_step", "0.7");
       gbm_->SetParam("max_delta_step", "0.7");
     }
+#endif
   }
   /*!
    * \brief get un-transformed prediction
@@ -447,7 +514,7 @@ class BoostLearner : public rabit::Serializable {
   inline void PredictRaw(const DMatrix &data,
                          std::vector<float> *out_preds,
                          unsigned ntree_limit = 0) const {
-    gbm_->Predict(data.fmat(), this->FindBufferOffset(data),
+    gbm_->Predict(data.fmat(), this->FindBufferOffset(data), // DJH
                   data.info.info, out_preds, ntree_limit);
     // add base margin
     std::vector<float> &preds = *out_preds;
@@ -493,7 +560,7 @@ class BoostLearner : public rabit::Serializable {
      * \param val value of the parameter
      */
     inline void SetParam(const char *name, const char *val) {
-      using namespace std;
+      using namespace std; // DJH
       if (!strcmp("base_score", name)) base_score = static_cast<float>(atof(val));
       if (!strcmp("num_class", name)) num_class = atoi(val);
       if (!strcmp("bst:num_feature", name)) num_feature = atoi(val);
@@ -561,7 +628,7 @@ class BoostLearner : public rabit::Serializable {
         :mat_(mat), buffer_offset_(buffer_offset), num_row_(num_row) {}
   };
   // find internal bufer offset for certain matrix, if not exist, return -1
-  inline int64_t FindBufferOffset(const DMatrix &mat) const {
+  inline int64_t FindBufferOffset(const DMatrix &mat) const { // DJH
     for (size_t i = 0; i < cache_.size(); ++i) {
       if (cache_[i].mat_ == &mat && mat.cache_learner_ptr_ == this) {
         if (cache_[i].num_row_ == mat.info.num_row()) {

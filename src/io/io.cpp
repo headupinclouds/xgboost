@@ -16,6 +16,11 @@ DataMatrix* LoadDataMatrix(const char *fname,
                            bool savebuffer,
                            bool loadsplit,
                            const char *cache_file) {
+    
+#if XGBOOST_DO_LEAN
+  assert(false);
+  return nullptr;
+#else
   using namespace std;
   std::string fname_ = fname;
 
@@ -80,9 +85,13 @@ DataMatrix* LoadDataMatrix(const char *fname,
       }
     }
   }
+#endif
 }
 
 void SaveDataMatrix(const DataMatrix &dmat, const char *fname, bool silent) {
+#if XGBOOST_DO_LEAN
+    assert(false);
+#else
   if (dmat.magic == DMatrixSimple::kMagic) {
     const DMatrixSimple *p_dmat = static_cast<const DMatrixSimple*>(&dmat);
     p_dmat->SaveBinary(fname, silent);
@@ -91,6 +100,7 @@ void SaveDataMatrix(const DataMatrix &dmat, const char *fname, bool silent) {
     smat.CopyFrom(dmat);
     smat.SaveBinary(fname, silent);
   }
+#endif
 }
 
 }  // namespace io

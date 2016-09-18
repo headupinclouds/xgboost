@@ -36,10 +36,18 @@ class GBLinear : public IGradBooster {
     }
   }
   virtual void LoadModel(utils::IStream &fi, bool with_pbuffer) { // NOLINT(*)
+#if XGBOOST_DO_LEAN
+    assert(false);
+#else
     model.LoadModel(fi);
+#endif
   }
   virtual void SaveModel(utils::IStream &fo, bool with_pbuffer) const { // NOLINT(*)
+#if XGBOOST_DO_LEAN
+    assert(false);
+#else      
     model.SaveModel(fo);
+#endif
   }
   virtual void InitModel(void) {
     model.InitModel();
@@ -58,6 +66,9 @@ class GBLinear : public IGradBooster {
                        int64_t buffer_offset,
                        const BoosterInfo &info,
                        std::vector<bst_gpair> *in_gpair) {
+#if XGBOOST_DO_LEAN
+    assert(false);
+#else      
     std::vector<bst_gpair> &gpair = *in_gpair;
     const int ngroup = model.param.num_output_group;
     const std::vector<bst_uint> &rowset = p_fmat->buffered_rowset();
@@ -116,6 +127,7 @@ class GBLinear : public IGradBooster {
         }
       }
     }
+#endif
   }
 
   virtual void Predict(IFMatrix *p_fmat,
@@ -153,10 +165,14 @@ class GBLinear : public IGradBooster {
                        std::vector<float> *out_preds,
                        unsigned ntree_limit,
                        unsigned root_index) {
+#if XGBOOST_DO_LEAN
+    assert(false);
+#else
     const int ngroup = model.param.num_output_group;
     for (int gid = 0; gid < ngroup; ++gid) {
       this->Pred(inst, BeginPtr(*out_preds));
     }
+#endif
   }
   virtual void PredictLeaf(IFMatrix *p_fmat,
                            const BoosterInfo &info,
@@ -165,6 +181,9 @@ class GBLinear : public IGradBooster {
     utils::Error("gblinear does not support predict leaf index");
   }
   virtual std::vector<std::string> DumpModel(const utils::FeatMap& fmap, int option) {
+#if XGBOOST_DO_LEAN
+    assert(false);
+#else      
     std::stringstream fo("");
     fo << "bias:\n";
     for (int i = 0; i < model.param.num_output_group; ++i) {
@@ -179,6 +198,7 @@ class GBLinear : public IGradBooster {
     std::vector<std::string> v;
     v.push_back(fo.str());
     return v;
+#endif
   }
 
  protected:
@@ -277,20 +297,32 @@ class GBLinear : public IGradBooster {
     std::vector<float> weight;
     // initialize the model parameter
     inline void InitModel(void) {
+#if XGBOOST_DO_LEAN        
+      assert(false);
+#else
       // bias is the last weight
       weight.resize((param.num_feature + 1) * param.num_output_group);
       std::fill(weight.begin(), weight.end(), 0.0f);
+#endif 
     }
     // save the model to file
     inline void SaveModel(utils::IStream &fo) const { // NOLINT(*)
+#if XGBOOST_DO_LEAN
+      assert(false);
+#else
       fo.Write(&param, sizeof(Param));
       fo.Write(weight);
+#endif
     }
     // load model from file
     inline void LoadModel(utils::IStream &fi) { // NOLINT(*)
+#if XGBOOST_DO_LEAN
+      assert(false);
+#else
       XGBOOST_STATIC_ASSERT(sizeof(Param) % sizeof(uint64_t) == 0)
       utils::Assert(fi.Read(&param, sizeof(Param)) != 0, "Load LinearBooster");
       fi.Read(&weight);
+#endif
     }
       
 #if XGBOOST_USE_BOOST

@@ -42,6 +42,15 @@ sugar_include(.)
 option(SKIP_INSTALL "Skip the package install" OFF)
 option(XGBOOST_USE_BOOST "Use boost serialization" ON)
 option(XGBOOST_USE_HALF "Support half precision floating point storage" ON)
+option(XGBOOST_DO_LEAN "Build lean library for evaluation only" OFF)
+
+if(XGBOOST_DO_LEAN)
+  add_definitions(-DXGBOOST_DO_LEAN=1)
+else()
+  add_definitions(-DXGBOOST_DO_LEAN=0)
+endif()
+
+message("XGBOOST_DO_LEAN = ${XGBOOST_DO_LEAN}")
 
 ### half ###
 if(XGBOOST_USE_HALF)
