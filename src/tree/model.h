@@ -28,6 +28,10 @@ namespace tree {
 template<typename TSplitCond, typename TNodeStat>
 class TreeModel {
  public:
+    
+  /*! Virtual destructor */
+  virtual ~TreeModel() {}
+    
   /*! \brief data type to indicate split condition */
   typedef TNodeStat  NodeStat;
   /*! \brief auxiliary statistics of node to help tree building */
