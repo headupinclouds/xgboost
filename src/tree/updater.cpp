@@ -17,6 +17,9 @@
 namespace xgboost {
 namespace tree {
 IUpdater* CreateUpdater(const char *name) {
+#if XGBOOST_DO_LEAN
+  assert(false);
+#else
   using namespace std;
   if (!strcmp(name, "prune")) return new TreePruner();
   if (!strcmp(name, "refresh")) return new TreeRefresher<GradStats>();
@@ -28,6 +31,7 @@ IUpdater* CreateUpdater(const char *name) {
   if (!strcmp(name, "distcol")) return new DistColMaker<GradStats>();
 #endif
   utils::Error("unknown updater:%s", name);
+#endif
   return NULL;
 }
 

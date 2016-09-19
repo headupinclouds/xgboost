@@ -28,6 +28,10 @@ namespace tree {
 template<typename TSplitCond, typename TNodeStat>
 class TreeModel {
  public:
+    
+  /*! Virtual destructor */
+  virtual ~TreeModel() {}
+    
   /*! \brief data type to indicate split condition */
   typedef TNodeStat  NodeStat;
   /*! \brief auxiliary statistics of node to help tree building */
@@ -612,10 +616,12 @@ struct RTreeNodeStat {
 /*! \brief define regression tree to be the most common tree model */
 class RegTree: public TreeModel<bst_float, RTreeNodeStat>{
  public:
+
+    RegTree() {} // boost needs default constructor for pointer serialization
+    virtual ~RegTree() {} // provide non virtual constructor
     
 #if XGBOOST_USE_BOOST
-    RegTree() {} // boost needs default constructor for pointer serialization
-    
+
     typedef TreeModel<bst_float, RTreeNodeStat> Super;
     
     friend class boost::serialization::access;
