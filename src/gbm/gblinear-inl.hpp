@@ -181,6 +181,7 @@ class GBLinear : public IGradBooster {
     utils::Error("gblinear does not support predict leaf index");
   }
   virtual std::vector<std::string> DumpModel(const utils::FeatMap& fmap, int option) {
+    std::vector<std::string> v;      
 #if XGBOOST_DO_LEAN
     assert(false);
 #else      
@@ -195,10 +196,9 @@ class GBLinear : public IGradBooster {
         fo << model[i][j] << std::endl;
       }
     }
-    std::vector<std::string> v;
     v.push_back(fo.str());
+#endif    
     return v;
-#endif
   }
 
  protected:
