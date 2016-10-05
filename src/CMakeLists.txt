@@ -92,7 +92,7 @@ install(
         "${PROJECT_SOURCE_DIR}/src"
         "${PROJECT_SOURCE_DIR}/wrapper"
     DESTINATION "${include_install_dir}/xgboost"
-    FILES_MATCHING PATTERN "*.h"
+    FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp"
 )
 
 install(
