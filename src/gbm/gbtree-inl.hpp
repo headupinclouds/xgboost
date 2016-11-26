@@ -43,9 +43,6 @@ class GBTree : public IGradBooster {
     if (trees.size() == 0) mparam.SetParam(name, val);
   }
   virtual void LoadModel(utils::IStream &fi, bool with_pbuffer) { // NOLINT(*)
-#if XGBOOST_DO_LEAN
-    assert(false);
-#else
     this->Clear();
     XGBOOST_STATIC_ASSERT(sizeof(ModelParam) % sizeof(uint64_t) == 0)
     utils::Check(fi.Read(&mparam, sizeof(ModelParam)) != 0,
@@ -68,12 +65,8 @@ class GBTree : public IGradBooster {
       utils::Check(fi.Read(&pred_counter[0], pred_counter.size() * sizeof(unsigned)) != 0,
                    "GBTree: invalid model file");
     }
-#endif
   }
   virtual void SaveModel(utils::IStream &fo, bool with_pbuffer) const { // NOLINT(*)
-#if XGBOOST_DO_LEAN
-    assert(false);
-#else
     utils::Assert(mparam.num_trees == static_cast<int>(trees.size()), "GBTree");
     if (with_pbuffer) {
       fo.Write(&mparam, sizeof(ModelParam));
@@ -92,7 +85,6 @@ class GBTree : public IGradBooster {
       fo.Write(BeginPtr(pred_buffer), pred_buffer.size() * sizeof(float));
       fo.Write(BeginPtr(pred_counter), pred_counter.size() * sizeof(unsigned));
     }
-#endif
   }
     
 #if XGBOOST_USE_BOOST
@@ -123,25 +115,18 @@ class GBTree : public IGradBooster {
     
   // initialize the predic buffer
   virtual void InitModel(void) {
-#if XGBOOST_DO_LEAN
-    assert(false);
-#else
     pred_buffer.clear(); pred_counter.clear();
     pred_buffer.resize(mparam.PredBufferSize(), 0.0f);
     pred_counter.resize(mparam.PredBufferSize(), 0);
-    utils::Assert(mparam.num_trees == 0, "GBTree: model already initialized");
-    utils::Assert(trees.size() == 0, "GBTree: model already initialized");
-#endif
+    
+    //utils::Assert(mparam.num_trees == 0, "GBTree: model already initialized");
+    //utils::Assert(trees.size() == 0, "GBTree: model already initialized");
   }
   virtual void ResetPredBuffer(size_t num_pbuffer) {
-#if XGBOOST_DO_LEAN
-    assert(false);
-#else
     mparam.num_pbuffer = static_cast<int64_t>(num_pbuffer);
     pred_buffer.clear(); pred_counter.clear();
     pred_buffer.resize(mparam.PredBufferSize(), 0.0f);
     pred_counter.resize(mparam.PredBufferSize(), 0);
-#endif
   }
   virtual bool AllowLazyCheckPoint(void) const {
     return !(tparam.distcol_mode != 0  && mparam.num_output_group != 1);

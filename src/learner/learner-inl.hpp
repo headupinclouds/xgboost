@@ -135,9 +135,6 @@ class BoostLearner : public rabit::Serializable {
   // this is an internal function
   // initialize the trainer, called at InitModel and LoadModel
   inline void InitTrainer(bool calc_num_feature = true) {
-#if XGBOOST_DO_LEAN
-      assert(false);
-#else
     if (calc_num_feature) {
       // estimate feature bound
       unsigned num_feature = 0;
@@ -152,14 +149,18 @@ class BoostLearner : public rabit::Serializable {
     char str_temp[25];
     utils::SPrintf(str_temp, sizeof(str_temp), "%d", mparam.num_feature);
     this->SetParam("bst:num_feature", str_temp);
-#endif
   }
   /*!
    * \brief initialize the model
    */
   inline void InitModel(void) {
 #if XGBOOST_DO_LEAN
-      assert(false);
+      // initialize model
+      this->InitObjGBM();
+      // reset the base score
+      mparam.base_score = obj_->ProbToMargin(mparam.base_score);
+      // initialize GBM model
+      gbm_->InitModel();
 #else
     this->InitTrainer();
     // initialize model
@@ -177,9 +178,6 @@ class BoostLearner : public rabit::Serializable {
    */
   inline void LoadModel(utils::IStream &fi,  // NOLINT(*)
                         bool calc_num_feature = true) {
-#if XGBOOST_USE_BOOST
-    assert(false);
-#else
     XGBOOST_STATIC_ASSERT(sizeof(ModelParam) % sizeof(uint64_t) == 0)
     utils::Check(fi.Read(&mparam, sizeof(ModelParam)) != 0,
                  "BoostLearner: wrong model format");
@@ -211,7 +209,6 @@ class BoostLearner : public rabit::Serializable {
     if (mparam.saved_with_pbuffer == 0) {
       gbm_->ResetPredBuffer(pred_buffer_size);
     }
-#endif
   }
   // rabit load model from rabit checkpoint
   virtual void Load(rabit::Stream *fi) {
@@ -236,9 +233,6 @@ class BoostLearner : public rabit::Serializable {
    * \param fname file name
    */
   inline void LoadModel(const char *fname) {
-#if XGBOOST_USE_BOOST
-    assert(false);
-#else
     utils::IStream *fi = utils::IStream::Create(fname, "r");
     std::string header; header.resize(4);
     // check header for different binary encode
@@ -257,19 +251,14 @@ class BoostLearner : public rabit::Serializable {
       this->LoadModel(*fi, true);
     }
     delete fi;
-#endif
   }
   inline void SaveModel(utils::IStream &fo, bool with_pbuffer) const { // NOLINT(*)
-#if XGBOOST_USE_BOOST
-    assert(false);
-#else
     ModelParam p = mparam;
     p.saved_with_pbuffer = static_cast<int>(with_pbuffer);
     fo.Write(&p, sizeof(ModelParam));
     fo.Write(name_obj_);
     fo.Write(name_gbm_);
     gbm_->SaveModel(fo, with_pbuffer);
-#endif
   }
     
 #if XGBOOST_USE_BOOST
@@ -495,14 +484,10 @@ class BoostLearner : public rabit::Serializable {
    * \brief additional default value for specific objs
    */
   inline void InitAdditionDefaultParam(void) {
-#if XGBOOST_DO_LEAN
-    assert(false);
-#else
     if (name_obj_ == "count:poisson") {
       obj_->SetParam("max_delta_step", "0.7");
       gbm_->SetParam("max_delta_step", "0.7");
     }
-#endif
   }
   /*!
    * \brief get un-transformed prediction
