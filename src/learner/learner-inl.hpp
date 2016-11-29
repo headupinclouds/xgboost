@@ -460,7 +460,7 @@ class BoostLearner : public rabit::Serializable {
 #endif
   }
 
- protected:
+// protected:
   /*!
    * \brief initialize the objective function and GBM,
    * if not yet done

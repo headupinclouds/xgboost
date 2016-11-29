@@ -254,7 +254,7 @@ class GBTree : public IGradBooster {
     return dump;
   }
 
- protected:
+ //protected:
   // clear the model
   inline void Clear(void) {
     for (size_t i = 0; i < trees.size(); ++i) {
